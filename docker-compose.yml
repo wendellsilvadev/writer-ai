@@ -1,0 +1,178 @@
+version: '3.8'
+
+services:
+
+  ml:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+
+    container_name: writer-ai-ml
+
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      MINIO_ENDPOINT_URL: http://minio:9000
+      RANDOM_STATE: ${RANDOM_STATE:-42}
+      TEST_SIZE: ${TEST_SIZE:-0.2}
+
+    volumes:
+      - ./ml:/app
+
+    depends_on:
+      - mlflow
+      - minio
+      - postgresql
+
+    networks:
+      - writer-ai-network
+
+    command: python train.py
+
+  # ============== DATABASE ==============
+  postgresql:
+    image: postgres:15-alpine
+    container_name: writer-ai-postgresql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mlflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mlflow_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mlflow_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+     test: ["CMD-SHELL", "pg_isready -U mlflow_user -d mlflow_db"]
+     interval: 10s
+     timeout: 5s
+     retries: 5
+    networks:
+      - writer-ai-network
+
+  # ============== S3 STORAGE (MinIO) ==============
+  minio:
+    image: minio/minio:latest
+    container_name: writer-ai-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - writer-ai-network
+
+  # ============== MLflow ==============
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: writer-ai-mlflow
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://${POSTGRES_USER:-mlflow_user}:${POSTGRES_PASSWORD:-mlflow_password}@postgresql:5432/${POSTGRES_DB:-mlflow_db}
+      --default-artifact-root s3://writer-ai/artifacts/
+      --host 0.0.0.0
+      --port 5000
+      --allowed-hosts mlflow,mlflow:5000,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - writer-ai-network
+
+  # ============== BACKEND (FastAPI) ==============
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: writer-ai-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ENDPOINT_URL: http://minio:9000
+      POSTGRES_HOST: postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-mlflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mlflow_password}
+      POSTGRES_DB: ${POSTGRES_DB:-mlflow_db}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./ml/models:/models:ro
+    depends_on:
+      - mlflow
+      - postgresql
+      - minio
+    networks:
+      - writer-ai-network
+
+  # ============== FRONTEND (Nginx) ==============
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: writer-ai-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - writer-ai-network
+
+  # ============== EVIDENTLY (Monitoring) ==============
+  evidently:
+    build:
+      context: ./monitoring
+      dockerfile: Dockerfile
+    container_name: writer-ai-evidently
+    environment:
+      EVIDENTLY_POSTGRES_HOST: postgresql
+      EVIDENTLY_POSTGRES_PORT: 5432
+      EVIDENTLY_POSTGRES_USER: ${POSTGRES_USER:-mlflow_user}
+      EVIDENTLY_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mlflow_password}
+      EVIDENTLY_POSTGRES_DB: ${POSTGRES_DB:-mlflow_db}
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - ./monitoring:/app
+    networks:
+      - writer-ai-network
+
+networks:
+  writer-ai-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+  mlflow_data:
+    driver: local

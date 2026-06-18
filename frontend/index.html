@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writer AI - Mesa do Escritor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1>✍️ Writer AI</h1>
+            <p class="subtitle">Mesa do Escritor - Análise Inteligente de Textos</p>
+        </div>
+    </header>
+
+    <!-- Container Principal -->
+    <main class="container">
+        <!-- Left Panel - Editor de Texto -->
+        <section class="editor-panel">
+            <div class="panel-header">
+                <h2>Mesa do Escritor</h2>
+                <span class="char-count" id="charCount">0 caracteres</span>
+            </div>
+            
+            <textarea 
+                id="textInput" 
+                class="text-editor"
+                placeholder="Escreva seu texto aqui... (mínimo 10 caracteres)"
+                spellcheck="false"
+            ></textarea>
+            
+            <button id="analyzeBtn" class="btn btn-primary" disabled>
+                <span class="btn-text">🔍 Analisar Texto</span>
+                <span class="btn-loader" style="display: none;">
+                    <span class="spinner"></span>
+                </span>
+            </button>
+
+            <!-- Histórico -->
+            <div class="history-section">
+                <h3>Histórico</h3>
+                <div id="historyList" class="history-list"></div>
+                <button id="clearHistoryBtn" class="btn btn-secondary btn-small">
+                    🗑️ Limpar Histórico
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Panel - Resultados -->
+        <section class="results-panel" id="resultsPanel" style="display: none;">
+            <!-- Loading State -->
+            <div class="loading-state" id="loadingState" style="display: none;">
+                <div class="spinner-large"></div>
+                <p>Analisando seu texto...</p>
+            </div>
+
+            <!-- Results Content -->
+            <div id="resultsContent" style="display: none;">
+                <!-- Tone Card -->
+                <div class="tone-card">
+                    <h3>Tom Predominante</h3>
+                    <div class="tone-badge" id="toneBadge"></div>
+                    <p id="toneDescription" class="tone-description"></p>
+                </div>
+
+                <!-- Sentiment Distribution Chart -->
+                <div class="chart-container">
+                    <h3>Distribuição de Sentimentos</h3>
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+
+                <!-- Sentiment Breakdown -->
+                <div class="sentiments-grid" id="sentimentsGrid"></div>
+
+                <!-- Insight Card -->
+                <div class="insight-card">
+                    <h3>💡 Insight Literário</h3>
+                    <p id="insightText"></p>
+                </div>
+
+                <!-- Engagement Card -->
+                <div class="engagement-card">
+                    <h3>📊 Predição de Engajamento</h3>
+                    <div class="engagement-display">
+                        <div class="engagement-badge" id="engagementBadge"></div>
+                        <div class="engagement-confidence" id="engagementConfidence"></div>
+                    </div>
+                </div>
+
+                <!-- Raw Data -->
+                <div class="raw-data-section">
+                    <details>
+                        <summary>📋 Dados Brutos (JSON)</summary>
+                        <pre id="rawDataPre"><code id="rawDataCode"></code></pre>
+                    </details>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Error Toast -->
+    <div id="errorToast" class="toast error" style="display: none;"></div>
+    
+    <!-- Success Toast -->
+    <div id="successToast" class="toast success" style="display: none;"></div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
