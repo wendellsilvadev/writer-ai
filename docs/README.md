@@ -349,12 +349,8 @@ python train.py
 3. Push para a branch
 4. Abra um Pull Request
 
-## 📞 Contato e Suporte
+## Suporte
 
 Para dúvidas sobre a arquitetura ou implementação, consulte a documentação em `docs/`.
 
 ---
-
-**Made with ❤️ by Senior ML Architect**
-
-Última atualização: Junho 2026
