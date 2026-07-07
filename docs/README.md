@@ -1,3 +1,8 @@
+## 📄 Entrega
+
+- 📘 **Documentação Final:** https://docs.google.com/document/d/1SWu6mdsRBQOImlT0wPzxlGscVVOILiaFgVDWDsT_hQ8/edit?tab=t.0#heading=h.9jl3gojm4fao
+- 🎥 **Vídeo de Demonstração:** https://...
+
 # 📖 Writer AI - Plataforma de Análise Inteligente de Sentimentos
 
 **Writer AI** é uma plataforma **end-to-end** de Machine Learning + MLOps para análise de sentimentos e predição de engajamento em textos, especialmente otimizada para conteúdo literário.
